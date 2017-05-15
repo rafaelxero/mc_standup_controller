@@ -41,6 +41,9 @@ namespace mc_control {
   bool MCStandupController::run() {
 
     nrIter++;
+
+    std::cout << nrIter << std::endl;
+    
     //q_calc = robot().mbc().q;
     //alpha_calc = robot().mbc().alpha;
     //alphaD_calc = robot().mbc().alphaD;
@@ -52,7 +55,7 @@ namespace mc_control {
     }
     else
       encoder_prev.resize(robot().encoderValues().size(), 0.0);
-    
+
     const std::vector<double> & encoder = robot().encoderValues();
     
     for (size_t i = 0; i < robot().refJointOrder().size(); ++i) {
@@ -66,6 +69,18 @@ namespace mc_control {
         alpha_prev[j] = robot().mbc().alpha[j][0];
       }
     }
+    
+    const Eigen::Vector3d & pIn = robot().bodySensor().position();
+    const Eigen::Quaterniond & qtIn = robot().bodySensor().orientation();
+    const Eigen::Vector3d & velIn = robot().bodySensor().linearVelocity();
+    const Eigen::Vector3d & rateIn = robot().bodySensor().angularVelocity();
+    //const Eigen::Vector3d & accIn = robot().bodySensor().acceleration();
+    
+    std::cout << "Internal state: " << robot().mbc().q[0][0] << " " << robot().mbc().q[0][1] << " " << robot().mbc().q[0][2] << " " << robot().mbc().q[0][3] <<  " " << robot().mbc().q[0][4] << " " << robot().mbc().q[0][5] << " " << robot().mbc().q[0][6] << " " << std::endl;
+    std::cout << "Sensor: " << qtIn.w() << " " << qtIn.x() << " " << qtIn.y() << " " << qtIn.z()  << " " << pIn.transpose() << std::endl;
+
+    robot().mbc().q[0] = {qtIn.w(), qtIn.x(), qtIn.y(), qtIn.z(), pIn.x(), pIn.y(), pIn.z()};
+    robot().mbc().alpha[0] = {rateIn.x(), rateIn.y(), rateIn.z(), velIn.x(), velIn.y(), velIn.z()};
 
     encoder_prev = encoder;
 
@@ -73,7 +88,6 @@ namespace mc_control {
     rbd::forwardVelocity(robot().mb(), robot().mbc());
     
     bool ret = MCController::run();
-    //ret = ret && MCController::run();
     return ret;
   }
 
